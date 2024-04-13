@@ -68,3 +68,20 @@ func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ ht
 
 	fmt.Print(w, "%s\n", userJsonObject)
 }
+
+func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	id := p.ByName("id")
+
+	if !bson.IsObjectIdHex(id) {
+		w.WriteHeader(http.StatusNotFound)
+	}
+
+	oid := bson.ObjectId(id)
+
+	if err := uc.session.DB("golang").C("users").RemoveId(oid); err != nil {
+		w.WriteHeader(404)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, "Deleted user ", oid, "\n")
+}
