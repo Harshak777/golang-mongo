@@ -47,3 +47,24 @@ func (uc UserController) GetUser(w http.ResponseWriter, r *http.Request, p httpr
 	w.WriteHeader(200)
 	fmt.Print(w, "%s\n", userJsonObject)
 }
+
+func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+	userObject := models.User{}
+
+	json.NewDecoder(r.Body).Decode(&userObject)
+
+	userObject.Id = bson.NewObjectId()
+
+	uc.session.DB("golang").C("users").Insert(userObject)
+
+	userJsonObject, err := json.Marshal(userObject)
+
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	fmt.Print(w, "%s\n", userJsonObject)
+}
