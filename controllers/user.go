@@ -1,38 +1,42 @@
 package controllers
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
+	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 
 	"github.com/harshak777/golang-mongo/models"
 )
 
 type UserController struct {
-	session *mgo.Session
+	session *mongo.Client
+	ctx     context.Context
 }
 
-func NewUserController(s *mgo.Session) *UserController {
-	return &UserController{s}
+func NewUserController(session *mongo.Client, ctx context.Context) *UserController {
+	return &UserController{session, ctx}
 }
 
 func (uc UserController) GetUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id := p.ByName("id")
 
-	if !bson.IsObjectIdHex(id) {
+	oid, err := primitive.ObjectIDFromHex(id)
+
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 	}
 
-	oid := bson.ObjectId(id)
-
 	userObject := models.User{}
+	filter := bson.M{"_id": oid}
 
-	if err := uc.session.DB("golang").C("users").FindId(oid).One(&userObject); err != nil {
+	if err := uc.session.Database("golang").Collection("users").FindOne(uc.ctx, filter).Decode(&userObject); err != nil {
 		w.WriteHeader(404)
 		return
 	}
@@ -45,7 +49,7 @@ func (uc UserController) GetUser(w http.ResponseWriter, r *http.Request, p httpr
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(200)
-	fmt.Print(w, "%s\n", userJsonObject)
+	fmt.Fprint(w, string(userJsonObject))
 }
 
 func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
@@ -53,9 +57,9 @@ func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ ht
 
 	json.NewDecoder(r.Body).Decode(&userObject)
 
-	userObject.Id = bson.NewObjectId()
+	userObject.Id = primitive.NewObjectID()
 
-	uc.session.DB("golang").C("users").Insert(userObject)
+	uc.session.Database("golang").Collection("users").InsertOne(uc.ctx, userObject)
 
 	userJsonObject, err := json.Marshal(userObject)
 
@@ -66,19 +70,20 @@ func (uc UserController) CreateUser(w http.ResponseWriter, r *http.Request, _ ht
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	fmt.Print(w, "%s\n", userJsonObject)
+	fmt.Fprint(w, "\n", string(userJsonObject))
 }
 
 func (uc UserController) DeleteUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	id := p.ByName("id")
 
-	if !bson.IsObjectIdHex(id) {
+	oid, err := primitive.ObjectIDFromHex(id)
+
+	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 	}
 
-	oid := bson.ObjectId(id)
-
-	if err := uc.session.DB("golang").C("users").RemoveId(oid); err != nil {
+	filter := bson.M{"_id": oid}
+	if uc.session.Database("golang").Collection("users").DeleteOne(uc.ctx, filter); err != nil {
 		w.WriteHeader(404)
 	}
 
