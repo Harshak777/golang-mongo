@@ -14,3 +14,17 @@ Modules required
 github.com/julienschmidt/httprouter
 go.mongodb.org/mongo-driver/mongo
 ```
+
+### Dependency use case
+httprouter - to get routing params
+mongo - to connect with Mongo
+
+### Project structure
+- controllers
+    - user.go
+- models
+    - user.go
+- main.go
+
+### Cleaning
+Clean the go mod but using `go mod tidy` to remove unused modules
