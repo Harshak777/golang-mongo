@@ -12,5 +12,5 @@ go get <module_name>
 Modules required
 ```
 github.com/julienschmidt/httprouter
-go.mongodb.org/mongo-driver
+go.mongodb.org/mongo-driver/mongo
 ```
